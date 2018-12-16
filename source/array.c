@@ -67,8 +67,8 @@ ARRAY zeros( int ndim, ... )
 				addr1[i] = 0;
 		break;
 	case 2:
-		nrow = va_arg( ptr, int );
 		ncol = va_arg( ptr, int );
+		nrow = va_arg( ptr, int );
 
 		put_addr( &x, Alloc2d_int( nrow, ncol ) );
 		put_ncol( &x, ncol );
@@ -82,8 +82,8 @@ ARRAY zeros( int ndim, ... )
 		break;
 
 	case 3:
-		nrow   = va_arg( ptr, int );
 		ncol   = va_arg( ptr, int );
+		nrow   = va_arg( ptr, int );
 		nsheet = va_arg( ptr, int );
 		
 		put_addr( &x, Alloc3d_int( nrow, ncol, nsheet ) );
@@ -143,14 +143,14 @@ ARRAY minus_ones( int ndim, int n, int k )
 	switch( ndim )
 	{
 	case 2:
-		put_addr( &x, Alloc2d_int( n, k ) );
-		put_ncol( &x, k );
-		put_nrow( &x, n );
+		put_addr( &x, Alloc2d_int( k, n ) );
+		put_ncol( &x, n );
+		put_nrow( &x, k );
 		put_ndim( &x, ndim );
 
 		addr = get_addr( x );
-		for( i = 0; i < n; i++ )
-			for( j = 0; j < k; j++ )
+		for( i = 0; i < k; i++ )
+			for( j = 0; j < n; j++ )
 				addr[i][j] = -1;
 		break;
 

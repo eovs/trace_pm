@@ -23,8 +23,8 @@ void copy_2D_to_3d( ARRAY dst, ARRAY src )
 	int **x  = get_addr( src );
 	int nrow_src = get_nrow( src );
 	int ncol_src = get_ncol( src );
-	int nrow_dst = get_nrow( src );
-	int ncol_dst = get_ncol( src );
+	int nrow_dst = get_nrow( dst );
+	int ncol_dst = get_ncol( dst );
 
 	if( nrow_src != nrow_dst || ncol_src != ncol_dst )
 		return;
@@ -34,6 +34,23 @@ void copy_2D_to_3d( ARRAY dst, ARRAY src )
 			y[0][i][j] = x[i][j];
 }
 
+void copy_2D_to_3d_( ARRAY dst, ARRAY src )
+{
+	int i, j;
+	int ***y = get_addr( dst );
+	int **x  = get_addr( src );
+	int nrow_src = get_nrow( src );
+	int ncol_src = get_ncol( src );
+	int nrow_dst = get_nrow( dst );
+	int nsheet_dst = get_nsheet( dst );
+
+	if( nrow_src != nsheet_dst || ncol_src != nrow_dst )
+		return;
+
+	for( i = 0; i < nrow_src; i++ )
+		for( j = 0; j < ncol_src; j++ )
+			y[i][j][0] = x[i][j];
+}
 
 void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 {
@@ -74,20 +91,20 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 	}
 	
 	//	DB=zeros(N,N,2);    //% degrees,3D
-	DB = zeros( 3, N, N, 2 );
+	DB = zeros( 3, 2, N, N );
 	//	DB(:,:,1)=A;        //% degrees, 3D
-	copy_2D_to_3d( DB, A );
+	copy_2D_to_3d_( DB, A );
 	
 	//	CB=zeros(N,N,2);    //% coefficients, 3D
-	CB = zeros( 3, N, N, 2 );
+	CB = zeros( 3, 2, N, N );
 	
 	//	CB(:,:,1)=WB;       //%  coefs, 3D
-	copy_2D_to_3d( CB, WB );
+	copy_2D_to_3d_( CB, WB );
 
 	//	BS=zeros(N,N,2); 
-	BS = zeros( 3, N, N, 2 );
+	BS = zeros( 3, 2, N, N );
 	//	BS(:,:,1)=AC;       //% Accumullator for ACE, 3D
-	copy_2D_to_3d( BS, AC );
+	copy_2D_to_3d_( BS, AC );
 
 
 	for( d = 3; d < gmax; d += 2 )
@@ -111,27 +128,29 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 			int **pWB   = get_addr( WB );
 			int wb = pWB[i][i];
 
-			if( wb > 0 && pDB[0][i][i] == 0 )
+			if( wb > 0 && pDB[i][i][0] == 0 )
 			{
 
 				//% Increase spectra
-				S[d] = S[d] + pCB[0][i][i];
+				S[d] = S[d] + pCB[i][i][0];
 				if( SA[d] > 0 )
-					SA[d] = my_min( SA[d], pBS[0][i][i] );
+					SA[d] = my_min( SA[d], pBS[i][i][0] );
 				else
-					SA[d] = pBS[0][i][i];
+					SA[d] = pBS[i][i][0];
 				
 				//% Subtract constant
 				wb = wb-1;
 				pWB[i][i] = wb;
 				//DB(I,I,1:wb)=DB(I,I,2:wb+1);
 				for( k = 0; k < wb; k++ )
-					pDB[k][i][i] = pDB[k+1][i][i];
+					pDB[i][i][k] = pDB[i][i][k+1];
 
 				//CB(I,I,1:wb)=CB(I,I,2:wb+1);            
 				for( k = 0; k < wb; k++ )
-					pCB[k][i][i] = pCB[k+1][i][i];
+					pCB[i][i][k] = pCB[i][i][k+1];
 				//%BS(I,I,1:wb)=BS(I,I,2:wb+1);
+				//for( k = 0; k < wb; k++ )
+				//	pBS[i][i][k] = pBS[i][i][k+1];
 			}
 		}
 	}
@@ -175,10 +194,10 @@ TANNER_MON_RES tanner_mon( ARRAY hd )
 		num += cw[i]; 
 	}
 
-	res.array1 = minus_ones( 2, nrow+ncol, num );
+	res.array1 = minus_ones( 2, num, nrow+ncol, num );
 	T = get_addr( res.array1 ); 
 	
-	res.array2 = zeros( 2, nrow+ncol, num );
+	res.array2 = zeros( 2, num, nrow+ncol );
 	W = get_addr( res.array2 );
 
 
@@ -235,10 +254,10 @@ HP2A_MON_RES hp2a_mon_pm( ARRAY hd, ARRAY w, int M )
 
 
 	//% Edges: loop over columns of Tanner
-	e = zeros( 2, 2*N, 2 );		E = get_addr( e );
-	x = zeros( 2, 2*N, 1 );		X = get_addr( x );
+	e = zeros( 2, 2, 2*N );		E = get_addr( e );
+	x = zeros( 2, 1, 2*N );		X = get_addr( x );
 	//% column weights
-	s = zeros( 2, 2*N, 1 );		S = get_addr( s );
+	s = zeros( 2, 1, 2*N );		S = get_addr( s );
 	
 
 
@@ -480,7 +499,8 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 
 	//	[bb,~,LB]=size(DB);
 	bb = get_nrow( DB );
-	LB = get_nsheet( DB );
+//	LB = get_nsheet( DB );
+	LB = get_ncol( DB );
 
 	LX=LB+1;
 	//db=zeros(1,LB); % Column degrees 
@@ -495,11 +515,11 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 	//WX=zeros(bb,bb);    % weights
 	WX = zeros( 2, bb, bb );	
 	//DX=zeros(bb,bb,LX); % degrees
-	DX = zeros( 3, bb, bb, M );
+	DX = zeros( 3, M, bb, bb );
 	//CX=zeros(bb,bb,LX); % coefs
-	CX = zeros( 3, bb, bb, M );
+	CX = zeros( 3, M, bb, bb );
 	//XS=zeros(bb,bb,LX); % ACEs
-	XS = zeros( 3, bb, bb, M );
+	XS = zeros( 3, M, bb, bb );
 
 	//% main loop
 	w=0;  //% max weight
@@ -528,9 +548,9 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 	
 					for( h = 0; h < wb; h++ )  //% read from 3D arrays
 					{
-						db[h] = pDB[h][I][j];
-						cb[h] = pCB[h][I][j];
-						bs[h] = pBS[h][I][j];
+						db[h] = pDB[I][j][h];
+						cb[h] = pCB[I][j][h];
+						bs[h] = pBS[I][j][h];
 					}
 
 					h = 0;
@@ -606,9 +626,9 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 			pWX[I][J] = wx;    //% weights
 			for( h = 0; h < wx; h++ )
 			{
-				pDX[h][I][J] = dx[h]; //% degrees
-				pCX[h][I][J] = cx[h]; //% coefs
-				pXS[h][I][J] = xs[h]; //% ACEs
+				pDX[I][J][h] = dx[h]; //% degrees
+				pCX[I][J][h] = cx[h]; //% coefs
+				pXS[I][J][h] = xs[h]; //% ACEs
 			}
 			w = my_max( w, wx );  //% max weight
 			
