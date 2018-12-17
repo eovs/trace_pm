@@ -49,7 +49,7 @@ int main( void )
 	trace_bound_pol_mon_pm( matr, M, gmax, SN, SA );
 	t1 = clock();
 
-	printf("time: %d msec\n", (t1 - t0) * 100 / CLOCKS_PER_SEC );
+	printf("time: %d msec\n", (t1 - t0) * 1000 / CLOCKS_PER_SEC );
 	for( i = 0; i < gmax; i++ )
 		printf("%6.4f  %2d\n", (float)SN[i] / 1000000, SA[i] );
 

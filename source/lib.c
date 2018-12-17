@@ -125,12 +125,11 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 			int ***pCB = get_addr( CB );
 			int ***pBS = get_addr( BS );
 			int ***pDB = get_addr( DB );
-			int **pWB   = get_addr( WB );
+			int **pWB  = get_addr( WB );
 			int wb = pWB[i][i];
 
 			if( wb > 0 && pDB[i][i][0] == 0 )
 			{
-
 				//% Increase spectra
 				S[d] = S[d] + pCB[i][i][0];
 				if( SA[d] > 0 )
@@ -153,6 +152,7 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 				//	pBS[i][i][k] = pBS[i][i][k+1];
 			}
 		}
+		//if( S[d] > 0 )	break;
 	}
 
 	for( i = 3; i < gmax; i += 2 )
@@ -479,9 +479,9 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 	int* db;
 	int* cb;
 	int* bs;
-	int* dx = malloc(M*sizeof(int));
-	int* cx = malloc(M*sizeof(int));
-	int* xs = malloc(M*sizeof(int));
+	int* dx;// = malloc(M*sizeof(int));
+	int* cx;// = malloc(M*sizeof(int));
+	int* xs;// = malloc(M*sizeof(int));
 	int* rdx = malloc(M*sizeof(int));
 	int* rcx = malloc(M*sizeof(int));
 	int* rxs = malloc(M*sizeof(int));
@@ -531,36 +531,36 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 
 	for( I=0; I < bb; I++ ) //% rows of B
 	{
-
 		for( J=0; J < bb; J++ ) //% columns of A (square marices)
 		{
-			wx = 0; dx[0] = 0; cx[0] = 0; xs[0] = 0;      //% accumulator
-			for( i = 0; i < M; i++ ) dx[i] = 0;
-			for( i = 0; i < M; i++ ) cx[i] = 0;
-			for( i = 0; i < M; i++ ) xs[i] = 0;
+			dx = &pDX[I][J][0]; //% degrees
+			cx = &pCX[I][J][0]; //% coefs
+			xs = &pXS[I][J][0]; //% ACEs
+
+			wx = 0; 
 
 			for( j = 0; j < bb; j++ ) //% loop along column
 			{
-				if( pWB[I][j] > 0 && pA[j][J] >= 0 )
+				int a = pA[j][J], as = pAS[j][J];
+				int wb = pWB[I][j];
+
+				if( wb > 0 && a >= 0 )
 				{
-					int a = pA[j][J], as = pAS[j][J];
-					int wb = pWB[I][j];
 	
-					for( h = 0; h < wb; h++ )  //% read from 3D arrays
+					for( h = 0; h < wb; h++ )  //% read from 3D arrays & multiply
 					{
-						db[h] = pDB[I][j][h];
+						db[h] = pDB[I][j][h] + a;
 						cb[h] = pCB[I][j][h];
-						bs[h] = pBS[I][j][h];
+						bs[h] = pBS[I][j][h] + as;
 					}
 
-					h = 0;
-				
+/*			
 					//% Multiplication 
 					//bs(1:wb)=bs(1:wb)+as;  % new col weights
 					for( h = 0; h < wb; h++ ) 	bs[h] += as;
 					//db(1:wb)=db(1:wb)+a;   % new degrees
 					for( h = 0; h < wb; h++ )	db[h] += a;
-
+*/
 
 					//t=find(db>=M,1);
 					tpos = find_first( db, wb, M );
@@ -568,37 +568,17 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 					//if( ~isempty(t) )
 					if( tpos >= 0 )
 					{
-						//if( t>1 )                 % Split
-						if( tpos > 0 )
-						{
-#if 01
-							for( i = tpos; i < wb; i++ ) db[i] -= M;
-							sum_sp_pol_mon( tpos, db, cb, bs, wb - tpos, db+tpos, cb+tpos, bs+tpos, &reswb, resdb, rescb, resbs );
+						for( h = 0, i = tpos; i < wb; i++, h++ ) resdb[h] = db[i] - M;
+						for( i = 0; i < tpos; i++, h++ ) resdb[h] = db[i];
+						for( i = 0; i < wb; i++ ) db[i] = resdb[i];
 
-							wb = reswb;
-							for( i = 0; i < wb; i++ ) db[i] = resdb[i];
-							for( i = 0; i < wb; i++ ) cb[i] = rescb[i];
-							for( i = 0; i < wb; i++ ) bs[i] = resbs[i];
-#else
-							for( h = 0, i = tpos; i < wb; i++, h++ ) resdb[h] = db[i] - M;
-							for( i = 0; i < tpos; i++, h++ ) resdb[h] = db[i];
-							for( i = 0; i < wb; i++ ) db[i] = resdb[i];
+						for( h = 0, i = tpos; i < wb; i++, h++ ) rescb[h] = cb[i];
+						for( i = 0; i < tpos; i++, h++ ) rescb[h] = cb[i];
+						for( i = 0; i < wb; i++ ) cb[i] = rescb[i];
 
-							for( h = 0, i = tpos; i < wb; i++, h++ ) rescb[h] = cb[i];
-							for( i = 0; i < tpos; i++, h++ ) rescb[h] = cb[i];
-							for( i = 0; i < wb; i++ ) cb[i] = rescb[i];
-
-							for( h = 0, i = tpos; i < wb; i++, h++ ) resbs[h] = bs[i];
-							for( i = 0; i < tpos; i++, h++ ) resbs[h] = bs[i];
-							for( i = 0; i < wb; i++ ) bs[i] = resbs[i];
-#endif
-						}
-						else //% t==1
-						{
-							//db=mod(db,M);
-							for( h = 0; h < wb; h++ )
-								db[h] = db[h] % M;
-						}
+						for( h = 0, i = tpos; i < wb; i++, h++ ) resbs[h] = bs[i];
+						for( i = 0; i < tpos; i++, h++ ) resbs[h] = bs[i];
+						for( i = 0; i < wb; i++ ) bs[i] = resbs[i];
 					}
 	
 
@@ -612,47 +592,24 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 					h = 0;
 				}
 			}
-			j = 0;
-			//% write c to x
-			 
-			//WX(I,J)=wx;    % weights
-			//	for h=1:wx
-			//		DX(I,J,h)=dx(h); % degrees
-			//		CX(I,J,h)=cx(h); % coefs
-			//		XS(I,J,h)=xs(h); % ACEs
-			//		end
-			//		w=max(w,wx);  % max weight
+
 
 			pWX[I][J] = wx;    //% weights
-			for( h = 0; h < wx; h++ )
-			{
-				pDX[I][J][h] = dx[h]; //% degrees
-				pCX[I][J][h] = cx[h]; //% coefs
-				pXS[I][J][h] = xs[h]; //% ACEs
-			}
 			w = my_max( w, wx );  //% max weight
 			
 		}
 	}
 
-
-
-	//% Cut extra zeros
 	if( w < my_max(LX,2) )
-	{
-		LX=w;
-		//DX=DX(:,:,1:w);
-		//CX=CX(:,:,1:w);
-		//XS=XS(:,:,1:w);
-	}
+		LX = w;
 	
 	free( db );
 	free( cb );
 	free( bs );
 
-	free( dx );
-	free( cx );
-	free( xs );
+	//free( dx );
+	//free( cx );
+	//free( xs );
 
 	free( rdx );
 	free( rcx );
