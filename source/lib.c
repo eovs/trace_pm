@@ -11,9 +11,12 @@
 
 void sum_sp_pol_mon
 ( 
-	int wx, int *dx, int *cx, int *xs, 
-	int wy, int *dy, int *cy, int *ys,
-	int *wz, int *dz, int *cz, int *zs 
+//int wx, int *dx, int *cx, int *xs, 
+//int wy, int *dy, int *cy, int *ys,
+//int *wz, int *dz, int *cz, int *zs 
+	POLYNOM *acc,
+	POLYNOM *tmp,
+	POLYNOM *res
 );
 
 void copy_2D_to_3d( ARRAY dst, ARRAY src )
@@ -194,7 +197,7 @@ TANNER_MON_RES tanner_mon( ARRAY hd )
 		num += cw[i]; 
 	}
 
-	res.array1 = minus_ones( 2, num, nrow+ncol, num );
+	res.array1 = minus_ones( 2, num, nrow+ncol );
 	T = get_addr( res.array1 ); 
 	
 	res.array2 = zeros( 2, num, nrow+ncol );
@@ -355,30 +358,41 @@ HP2A_MON_RES hp2a_mon_pm( ARRAY hd, ARRAY w, int M )
 }
 
 
-int find_first( int *x, int n, int M )
+int find_first( int *x, int n, int lim )
 {
 	int i;
-	int pos = -1;
 	for( i = 0; i < n; i++ )
-	{
-		if( x[i] >= M )
-		{
-			pos = i;
+		if( x[i] >= lim )
 			break;
-		}
-	}
-	return pos;
+	return i;
 }
 
 
 void sum_sp_pol_mon
 ( 
-	int wx, int *dx, int *cx, int *xs, 
-	int wy, int *dy, int *cy, int *ys,
-	int *wz, int *dz, int *cz, int *zs 
+	//int wx, int *dx, int *cx, int *xs, 
+	//int wy, int *dy, int *cy, int *ys,
+	//int *wz, int *dz, int *cz, int *zs 
+	POLYNOM *acc, 
+	POLYNOM *tmp,
+	POLYNOM *res
 )
 {
 	int cntX, cntY, cntZ;
+	int wx  = acc->degree;
+	int *dx = acc->pos;
+	int *cx = acc->coef;
+	int *xs = acc->ace; 
+
+	int wy  = tmp->degree;
+	int *dy = tmp->pos;
+	int *cy = tmp->coef;
+	int *ys = tmp->ace;
+
+	int *wz = &res->degree;
+	int *dz = res->pos;
+	int *cz = res->coef;
+	int *zs = res->ace; 
 	
 	*wz = 0;
 	cntX = 0;
@@ -475,22 +489,18 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 	int ***pDX;
 	int ***pCX;
 	int ***pXS;
-	int wx, rwx;
+	int wx;
 	int* db;
 	int* cb;
 	int* bs;
-	int* dx;// = malloc(M*sizeof(int));
-	int* cx;// = malloc(M*sizeof(int));
-	int* xs;// = malloc(M*sizeof(int));
+	int* dx;
+	int* cx;
+	int* xs;
 	int* rdx = malloc(M*sizeof(int));
 	int* rcx = malloc(M*sizeof(int));
 	int* rxs = malloc(M*sizeof(int));
 	int tpos;
 	int h, i, j;
-	int reswb;
-	int *resdb = malloc(M*sizeof(int));
-	int *rescb = malloc(M*sizeof(int));
-	int *resbs = malloc(M*sizeof(int));
 
 	//% A,B are degree matrices
 	//	% B is 3D
@@ -504,7 +514,6 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 
 	LX=LB+1;
 	//db=zeros(1,LB); % Column degrees 
-	
 	db = calloc( LB, sizeof(db[0]) );	
 	//cb=zeros(1,LB); % coefs
 	cb = calloc( LB, sizeof(cb[0]) );
@@ -531,13 +540,26 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 
 	for( I=0; I < bb; I++ ) //% rows of B
 	{
+		POLYNOM acc, tmp, res;
+
 		for( J=0; J < bb; J++ ) //% columns of A (square marices)
 		{
 			dx = &pDX[I][J][0]; //% degrees
 			cx = &pCX[I][J][0]; //% coefs
 			xs = &pXS[I][J][0]; //% ACEs
-
 			wx = 0; 
+
+			acc.pos    = dx;
+			acc.coef   = cx;
+			acc.ace    = xs;
+
+			tmp.pos    = db;
+			tmp.coef   = cb;
+			tmp.ace    = bs;
+
+			res.pos    = rdx;
+			res.coef   = rcx;
+			res.ace    = rxs;
 
 			for( j = 0; j < bb; j++ ) //% loop along column
 			{
@@ -546,57 +568,33 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 
 				if( wb > 0 && a >= 0 )
 				{
-	
-					for( h = 0; h < wb; h++ )  //% read from 3D arrays & multiply
-					{
-						db[h] = pDB[I][j][h] + a;
-						cb[h] = pCB[I][j][h];
-						bs[h] = pBS[I][j][h] + as;
-					}
+					acc.degree = wx;
+					tmp.degree = wb;
 
-/*			
-					//% Multiplication 
-					//bs(1:wb)=bs(1:wb)+as;  % new col weights
-					for( h = 0; h < wb; h++ ) 	bs[h] += as;
-					//db(1:wb)=db(1:wb)+a;   % new degrees
-					for( h = 0; h < wb; h++ )	db[h] += a;
-*/
+					tpos = find_first(  &pDB[I][j][0], wb, M-a );
 
-					//t=find(db>=M,1);
-					tpos = find_first( db, wb, M );
+					for( h = 0, i = tpos; i < wb; i++, h++ ) db[h] = pDB[I][j][i] + a - M;
+					for( i = 0; i < tpos; i++, h++ )         db[h] = pDB[I][j][i] + a;
 
-					//if( ~isempty(t) )
-					if( tpos >= 0 )
-					{
-						for( h = 0, i = tpos; i < wb; i++, h++ ) resdb[h] = db[i] - M;
-						for( i = 0; i < tpos; i++, h++ ) resdb[h] = db[i];
-						for( i = 0; i < wb; i++ ) db[i] = resdb[i];
+					for( h = 0, i = tpos; i < wb; i++, h++ ) cb[h] = pCB[I][j][i];
+					for( i = 0; i < tpos; i++, h++ )         cb[h] = pCB[I][j][i];
 
-						for( h = 0, i = tpos; i < wb; i++, h++ ) rescb[h] = cb[i];
-						for( i = 0; i < tpos; i++, h++ ) rescb[h] = cb[i];
-						for( i = 0; i < wb; i++ ) cb[i] = rescb[i];
-
-						for( h = 0, i = tpos; i < wb; i++, h++ ) resbs[h] = bs[i];
-						for( i = 0; i < tpos; i++, h++ ) resbs[h] = bs[i];
-						for( i = 0; i < wb; i++ ) bs[i] = resbs[i];
-					}
+					for( h = 0, i = tpos; i < wb; i++, h++ ) bs[h] = pBS[I][j][i] + as;
+					for( i = 0; i < tpos; i++, h++ )         bs[h] = pBS[I][j][i] + as;
 	
 
 					//% Accumulation
 					//[wx,dx,cx,xs]=sum_sp_pol_mon( wx,dx,cx,xs, wb,db,cb,bs );
-					sum_sp_pol_mon( wx, dx, cx, xs, wb, db, cb, bs, &rwx, rdx, rcx, rxs );
-					wx = rwx;
-					for( h = 0; h < wx; h++ )	dx[h] = rdx[h];
-					for( h = 0; h < wx; h++ )	cx[h] = rcx[h];
-					for( h = 0; h < wx; h++ )	xs[h] = rxs[h];
-					h = 0;
+					sum_sp_pol_mon(  &acc, &tmp, &res );
+					wx = res.degree;
+					for( h = 0; h < wx; h++ )	dx[h] = res.pos[h];
+					for( h = 0; h < wx; h++ )	cx[h] = res.coef[h];
+					for( h = 0; h < wx; h++ )	xs[h] = res.ace[h];
 				}
 			}
 
-
 			pWX[I][J] = wx;    //% weights
 			w = my_max( w, wx );  //% max weight
-			
 		}
 	}
 
@@ -607,17 +605,9 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 	free( cb );
 	free( bs );
 
-	//free( dx );
-	//free( cx );
-	//free( xs );
-
 	free( rdx );
 	free( rcx );
 	free( rxs );
-
-	free( resdb );
-	free( rescb );
-	free( resbs );
 
 	res.ret1 = WX;
 	res.ret2 = DX;

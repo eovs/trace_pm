@@ -27,6 +27,13 @@ typedef struct
 	int	  ret5;
 }MUL_MAT_MAT_MON_RES;
 
+typedef struct 
+{
+	int degree;
+	int *pos;
+	int *coef;
+	int *ace;
+} POLYNOM; 
 
 void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *SN, int *SA );
 TANNER_MON_RES tanner_mon( ARRAY HD );
