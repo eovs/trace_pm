@@ -24,7 +24,6 @@ typedef struct
 	ARRAY ret2;
 	ARRAY ret3;
 	ARRAY ret4;
-	int	  ret5;
 	ARRAY pol;
 	ARRAY ase;
 }MUL_MAT_MAT_MON_RES;
@@ -52,7 +51,7 @@ TANNER_MON_RES tanner_mon( ARRAY HD );
 HP2A_MON_RES hp2a_mon_pm( ARRAY HD, ARRAY W, int M );
 
 #ifdef NATURAL_POLYNOM
-MUL_MAT_MAT_MON_RES mul_mat_mat_mon( int bb, ARRAY WB, ARRAY DB, /*ARRAY CB, ARRAY BS, */ARRAY polB, ARRAY aseB, ARRAY A, ARRAY AC, int M);
+MUL_MAT_MAT_MON_RES mul_mat_mat_mon( int bb, ARRAY polB, ARRAY aceB, ARRAY A, ARRAY AC, int M);
 #else
 MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARRAY A, ARRAY AC, int M);
 #endif

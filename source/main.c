@@ -34,7 +34,9 @@ int main( void )
 	int SN[GMAX];
 	int SA[GMAX];
 
-
+	for( i = 0; i < GMAX; i++ ) SN[i] = 0;	
+	for( i = 0; i < GMAX; i++ ) SA[i] = 0;	
+	
 	matr.ndim = 2;
 
 	put_nrow( &matr, HDrow );

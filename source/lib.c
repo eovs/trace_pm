@@ -57,11 +57,11 @@ void copy_2D_to_3d_( ARRAY dst, ARRAY src )
 
 void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 {
-	int i, j, k;
+	int i, j;
 	int N;
 	int d;
 #ifdef NATURAL_POLYNOM
-	ARRAY polB, aseB;
+	ARRAY polB, aceB;
 #endif
 	TANNER_MON_RES tmr;
 	HP2A_MON_RES hmr;
@@ -99,7 +99,7 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 
 #ifdef NATURAL_POLYNOM
 	polB = zeros( 3, M, N, N );
-	aseB = zeros( 3, M, N, N );
+	aceB = zeros( 3, M, N, N );
 #endif
 
 	//	DB=zeros(N,N,2);    //% degrees,3D
@@ -126,12 +126,12 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 		int ***pCB = get_addr( CB );
 		int ***pBS = get_addr( BS );
 		int ***ppol = get_addr( polB );
-		int ***pase = get_addr( aseB );
+		int ***pace = get_addr( aceB );
 
 
 		for( I = 0; I < N; I++ )
 			for( J = 0; J < N; J++ )
-				unpack_pol( pWB[I][J], pDB[I][J], pCB[I][J], pBS[I][J], M, ppol[I][J], pase[I][J] );
+				unpack_pol( pWB[I][J], pDB[I][J], pCB[I][J], pBS[I][J], M, ppol[I][J], pace[I][J] );
 	}
 #endif
 
@@ -140,48 +140,15 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 		//printf("d=%d\n", d);
 		//[WB,DB,CB,BS]=mul_mat_mat_mon(WB,DB,CB,BS,A,AC,M);
 #ifdef NATURAL_POLYNOM
-		{
-			int I, J;
-			int **pWB = get_addr( WB );
-			int ***pDB = get_addr( DB );
-			int ***pCB = get_addr( CB );
-			int ***pBS = get_addr( BS );
-			int ***ppol = get_addr( polB );
-			int ***pase = get_addr( aseB );
+		mmmmr = mul_mat_mat_mon( N, polB, aceB, A, AC, M );
 
-
-		for( I = 0; I < N; I++ )
-			for( J = 0; J < N; J++ )
-				unpack_pol( pWB[I][J], pDB[I][J], pCB[I][J], pBS[I][J], M, ppol[I][J], pase[I][J] );
-		}
-		mmmmr = mul_mat_mat_mon( N, WB, DB, polB, aseB, A, AC, M );
-
-		{
-			int ***ppol = get_addr( mmmmr.pol );
-			int ***pase = get_addr( mmmmr.ase );
-			int **pW  = get_addr( mmmmr.ret1 );
-			int ***pD = get_addr( mmmmr.ret2 );
-			int ***pC = get_addr( mmmmr.ret3 );
-			int ***pS = get_addr( mmmmr.ret4 );
-			int I, J;
-
-			for( I = 0; I < N; I++ )
-			{
-
-				for( J = 0; J < N; J++ )
-				{
-					pW[I][J] = pack_pol( ppol[I][J], pase[I][J], M, &pD[I][J][0],&pC[I][J][0],&pS[I][J][0] );
-				}
-			}
-		}
 		free_ARRAY( polB );
-		free_ARRAY( aseB );
+		free_ARRAY( aceB );
 		polB = mmmmr.pol;
-		aseB = mmmmr.ase;
+		aceB = mmmmr.ase;
 
 #else
 		mmmmr = mul_mat_mat_mon( WB, DB, CB, BS, A, AC, M );
-#endif
 		free_ARRAY( WB );
 		free_ARRAY( DB );
 		free_ARRAY( CB );
@@ -190,47 +157,46 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 		DB = mmmmr.ret2;
 		CB = mmmmr.ret3;
 		BS = mmmmr.ret4;
+#endif
 
 		for( i = 0; i < N; i++ )
 		{
 #ifdef NATURAL_POLYNOM
-			int ***pCB = get_addr( CB );
-			//int ***pBS = get_addr( BS );
-			int ***pDB = get_addr( DB );
-			int **pWB  = get_addr( WB );
-			int wb = pWB[i][i];
 			int ***ppol = get_addr( polB );
-			int ***pase = get_addr( aseB );
+			int ***pace = get_addr( aceB );
 
-			if( wb > 0 && ppol[i][i][0] != 0  )
+			if( ppol[i][i][0] != 0  )
 			{
 				//% Increase spectra
 				S[d] = S[d] + ppol[i][i][0];
 
 				if( SA[d] > 0 )
-					SA[d] = my_min( SA[d], pase[i][i][0] );
+					SA[d] = my_min( SA[d], pace[i][i][0] );
 				else
-					SA[d] = pase[i][i][0];
+					SA[d] = pace[i][i][0];
 
 				//% Subtract constant
-				{
-					for( k = 0; k < M-1; k++ )	
-						ppol[i][i][k] = ppol[i][i][k+1];
-					ppol[i][i][M-1] = 0;
-					//for( k = 0; k < M-1; k++ )	pase[i][i][k] = pase[i][i][k+1];
-				}
-				wb = wb-1;
-				pWB[i][i] = wb;
-				//DB(I,I,1:wb)=DB(I,I,2:wb+1);
-				for( k = 0; k < wb; k++ )
-					pDB[i][i][k] = pDB[i][i][k+1];
-
-				//CB(I,I,1:wb)=CB(I,I,2:wb+1);            
-				for( k = 0; k < wb; k++ )
-					pCB[i][i][k] = pCB[i][i][k+1];
+				
+#if 1
+				// know how!!!
 				//%BS(I,I,1:wb)=BS(I,I,2:wb+1);
-				//for( k = 0; k < wb; k++ )
-				//	pBS[i][i][k] = pBS[i][i][k+1];
+				{
+					int pd[100];
+					int pc[100];
+					int ps[100];
+					int ps_org[100];
+					int w;
+
+					w = pack_pol( ppol[i][i], pace[i][i], M, pd, pc, ps_org );
+					ppol[i][i][0] = 0;
+					w =  pack_pol( ppol[i][i], pace[i][i], M, pd, pc, ps );
+					unpack_pol( w, pd, pc, ps_org, M, ppol[i][i], pace[i][i] );
+				}
+#else
+				ppol[i][i][0] = 0;
+				//BS(I,I,1:wb)=BS(I,I,2:wb+1);
+				pace[i][i][0] = 0;
+#endif
 			}
 #else
 			int ***pCB = get_addr( CB );
@@ -275,7 +241,7 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 
 #ifdef NATURAL_POLYNOM
 	free_ARRAY( polB );
-	free_ARRAY( aseB );
+	free_ARRAY( aceB );
 #endif
 
 	free_ARRAY( WB );
@@ -586,11 +552,6 @@ void sum_sp_pol_mon
 }
 
 #ifdef NATURAL_POLYNOM
-int pol1[27], ase1[27];
-#if 0
-int wy;
-int dxx[27], cxx[27], xsx[27];
-#endif
 unpack_pol( int wx, int dx[], int cx[], int xs[], int M, int pol[], int ase[] )
 {
 	int i;
@@ -623,7 +584,7 @@ int pack_pol( int pol[], int ase[], int M, int dx[], int cx[], int xs[] )
 	return j;
 }
 
-void add_pol( int pol0[], int ase0[], int pol1[], int ase1[], int M )
+void add_pol( int pol0[], int ace0[], int pol1[], int ace1[], int M )
 {
 	int i;
 	
@@ -632,222 +593,106 @@ void add_pol( int pol0[], int ase0[], int pol1[], int ase1[], int M )
 		if( pol0[i] == 0 )
 		{
 			pol0[i] = pol1[i];
-			ase0[i] = ase1[i];
+			ace0[i] = ace1[i];
 		}
 		else
 		{
 			if( pol1[i] == 0 )
 			{
 				pol0[i] = pol0[i];
-				ase0[i] = ase0[i];
+				ace0[i] = ace0[i];
 			}
 			else
 			{
 				pol0[i] += pol1[i];
-				ase0[i] = my_min( ase0[i], ase1[i] );
+				ace0[i] = my_min( ace0[i], ace1[i] );
 			}
 		}
 	}
 }
 
-MUL_MAT_MAT_MON_RES mul_mat_mat_mon( int bb, ARRAY WB, ARRAY DB, ARRAY polB, ARRAY aseB, ARRAY A, ARRAY AS, int M)
+MUL_MAT_MAT_MON_RES mul_mat_mat_mon( int bb, ARRAY polB, ARRAY aceB, ARRAY A, ARRAY AS, int M)
 {
-	//int bb;
-	int LB = 0;
-	int LX = 0;
-	ARRAY WX, CX, DX, XS;
-	ARRAY polY, aseY;
+	ARRAY polY, aceY;
 	int I, J;
-	int w;
 	MUL_MAT_MAT_MON_RES res;
 
-	int **pWB = get_addr( WB );
-	int **pA = get_addr( A );
+	int **pA  = get_addr( A );
 	int **pAS = get_addr( AS );
-	int ***pDB = get_addr( DB );
-	int **pWX;
-	int ***pDX;
-	int ***pCX;
-	int ***pXS;
 	int ***ppolB;
-	int ***paseB;
+	int ***paceB;
 	int ***ppolY;
-	int ***paseY;
-	int wx;
-#if 0
-	int* db;
-	int* cb;
-	int* bs;
-	int* dx;
-	int* cx;
-	int* xs;
-	int* rdx = malloc(M*sizeof(int));
-	int* rcx = malloc(M*sizeof(int));
-	int* rxs = malloc(M*sizeof(int));
-	int tpos;
-#endif
+	int ***paceY;
+
 	int h, i, j;
 
-	//% A,B are degree matrices
-	//	% B is 3D
-	//	% A is 2D
-	//	% M is modulo
-
-	//	[bb,~,LB]=size(DB);
-	//  bb = get_nrow( DB );
-	//	LB = get_nsheet( DB );
-	LB = get_ncol( DB );
-
-#if 0
-	LX=LB+1;
-
-	//db=zeros(1,LB); % Column degrees 
-	db = calloc( LB, sizeof(db[0]) );	
-	//cb=zeros(1,LB); % coefs
-	cb = calloc( LB, sizeof(cb[0]) );
-	//bs=zeros(1,LB); % ace
-	bs = calloc( LB, sizeof(bs[0]) );
-#endif
-	//% ARRAY for result
-	//WX=zeros(bb,bb);    % weights
-	WX = zeros( 2, bb, bb );	
-	//DX=zeros(bb,bb,LX); % degrees
-	DX = zeros( 3, M, bb, bb );
-	//CX=zeros(bb,bb,LX); % coefs
-	CX = zeros( 3, M, bb, bb );
-	//XS=zeros(bb,bb,LX); % ACEs
-	XS = zeros( 3, M, bb, bb );
+	int *pol1 = malloc( M * sizeof(pol1[0]) );
+	int *ace1 = malloc( M * sizeof(ace1[0]) );
 
 
 	polY = zeros( 3, M, bb, bb );	
-	aseY = zeros( 3, M, bb, bb );	
+	aceY = zeros( 3, M, bb, bb );	
 
 
 	//% main loop
-	w=0;  //% max weight
-
-	pWX = get_addr( WX );
-	pDX = get_addr( DX );
-	pCX = get_addr( CX );
-	pXS = get_addr( XS );
-
-
 	ppolB = get_addr( polB );
-	paseB = get_addr( aseB );
+	paceB = get_addr( aceB );
 
 	ppolY = get_addr( polY );
-	paseY = get_addr( aseY );
+	paceY = get_addr( aceY );
 
 	for( I=0; I < bb; I++ ) //% rows of B
 	{
-#if 0
-		POLYNOM acc, tmp, res;
-#endif
+
 		for( J=0; J < bb; J++ ) //% columns of A (square marices)
 		{
-#if 0
-			dx = &pDX[I][J][0]; //% degrees
-			cx = &pCX[I][J][0]; //% coefs
-			xs = &pXS[I][J][0]; //% ACEs
-			wx = 0; 
-			acc.pos    = dx;
-			acc.coef   = cx;
-			acc.ace    = xs;
 
-			tmp.pos    = db;
-			tmp.coef   = cb;
-			tmp.ace    = bs;
-
-			res.pos    = rdx;
-			res.coef   = rcx;
-			res.ace    = rxs;
-#endif
 			int* pol0 = ppolY[I][J];
-			int* ase0 = paseY[I][J];
+			int* ase0 = paceY[I][J];
 
 			for( j = 0; j < bb; j++ ) //% loop along column
 			{
-				int a = pA[j][J], as = pAS[j][J];
-				int wb = pWB[I][j];
+				int a  =  pA[j][J];
+				int as = pAS[j][J];
 
-				if( wb > 0 && a >= 0 )
+				if( a >= 0 )
 				{
-					for( h = 0, i = M - a; i < M; i++, h++ ) pol1[h] = ppolB[I][j][i];
-					for( i = 0; i < M - a; i++, h++ )        pol1[h] = ppolB[I][j][i];
-
-					for( h = 0, i = M - a; i < M; i++, h++ ) ase1[h] = paseB[I][j][i];
-					for( i = 0; i < M - a; i++, h++ )        ase1[h] = paseB[I][j][i];
-
+					int wb = 0;
 					for( h = 0; h < M; h++ )
 					{
-						if( pol1[h] )
-							ase1[h] += as;
+						if( ppolB[I][j][h] )
+						{
+							wb = 1;
+							break;
+						}
 					}
 
-					add_pol( pol0, ase0, pol1, ase1, M );
-#if 0
-					acc.degree = wx;
-					tmp.degree = wb;
-
-					wy = pack_pol( pol0, ase0, M, dxx,cxx,xsx );
-
-					tpos = find_first(  &pDB[I][j][0], wb, M-a );
-
-					for( h = 0, i = tpos; i < wb; i++, h++ ) db[h] = pDB[I][j][i] + a - M;
-					for( i = 0; i < tpos; i++, h++ )         db[h] = pDB[I][j][i] + a;
-
-					for( h = 0, i = tpos; i < wb; i++, h++ ) cb[h] = pCB[I][j][i];
-					for( i = 0; i < tpos; i++, h++ )         cb[h] = pCB[I][j][i];
-
-					for( h = 0, i = tpos; i < wb; i++, h++ ) bs[h] = pBS[I][j][i] + as;
-					for( i = 0; i < tpos; i++, h++ )         bs[h] = pBS[I][j][i] + as;
-
-					sum_sp_pol_mon(  &acc, &tmp, &res );
-					wx = res.degree;
-					for( h = 0; h < wx; h++ )	dx[h] = res.pos[h];
-					for( h = 0; h < wx; h++ )	cx[h] = res.coef[h];
-					for( h = 0; h < wx; h++ )	xs[h] = res.ace[h];
-					if( wx != wy )
-						wy = 0;
-					for( h = 0; h < wx; h++ )
+					if( wb )
 					{
-						if( dx[h] != dxx[h] )
-							wy = 0;
-						if( cx[h] != cxx[h] )
-							wy = 0;
-						if( xs[h] != xsx[h] )
-							wy = 0;
+						for( h = 0, i = M - a; i < M; i++, h++ ) pol1[h] = ppolB[I][j][i];
+						for( i = 0; i < M - a; i++, h++ )        pol1[h] = ppolB[I][j][i];
+
+						for( h = 0, i = M - a; i < M; i++, h++ ) ace1[h] = paceB[I][j][i];
+						for( i = 0; i < M - a; i++, h++ )        ace1[h] = paceB[I][j][i];
+
+						for( h = 0; h < M; h++ )
+						{
+							if( pol1[h] )
+								ace1[h] += as;
+						}
+
+						add_pol( pol0, ase0, pol1, ace1, M );
 					}
-#endif
 				}
 			}
-
-#if 0
-			pWX[I][J] = wx;    //% weights
-			w = my_max( w, wx );  //% max weight
-#endif
 		}
 	}
 
-#if 0
-	if( w < my_max(LX,2) )
-		LX = w;
-	free( db );
-	free( cb );
-	free( bs );
+	free( pol1 );
+	free( ace1 );
 
-	free( rdx );
-	free( rcx );
-	free( rxs );
-#endif
-
-	res.ret1 = WX;
-	res.ret2 = DX;
-	res.ret3 = CX;
-	res.ret4 = XS;
-	res.ret5 = LX;
 	res.pol = polY;
-	res.ase = aseY;
+	res.ase = aceY;
 	return res;
 }
 #else
