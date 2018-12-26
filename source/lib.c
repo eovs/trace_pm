@@ -62,13 +62,20 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 	int d;
 #ifdef NATURAL_POLYNOM
 	ARRAY polB, aceB;
+	int *buffer;
+	int *pd;
+	int *pc;
+	int *ps;
+	int *ps_org;
+	int w;
+#else
+	ARRAY WB, DB, CB, BS;
 #endif
 	TANNER_MON_RES tmr;
 	HP2A_MON_RES hmr;
 	MUL_MAT_MAT_MON_RES mmmmr;
 	ARRAY HP, HA;
 	ARRAY A, AC;
-	ARRAY WB, DB, CB, BS;
 
 
 	for( i = 0; i < gmax; i++ ) S[i] = 0;	// Spectrum
@@ -87,6 +94,38 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 	//save_ARRAY( "AC.txt", AC );
 	N = get_ncol( A );
 
+#ifdef NATURAL_POLYNOM
+	polB = zeros( 3, M, N, N );
+	aceB = zeros( 3, M, N, N );
+	buffer = malloc( M * 4 * sizeof( buffer[0] ) );
+	pd = buffer;
+	pc = pd + M;
+	ps = pc + M;
+	ps_org = ps + M;
+
+
+	{
+		int  **a = get_addr( A );
+		int  **ac = get_addr( AC );
+
+		int ***ppol = get_addr( polB );
+		int ***pace = get_addr( aceB );
+
+		for( i = 0; i < N; i++ )
+		{
+			for( j = 0; j < N; j++ )
+			{
+				if( a[i][j] >= 0 )
+				{
+					int pos = a[i][j];
+					ppol[i][j][pos] = 1;
+					pace[i][j][pos] = ac[i][j];
+				}
+
+			}
+		}
+	}
+#else
 	//	WB=double(A>=0);	//% B  is accumulator, WB are Hamming weights, 2D, integer 
 	WB = zeros( 2, N, N );
 	{
@@ -96,11 +135,6 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 			for( j = 0; j < N; j++ )
 				wb[i][j] = a[i][j] >= 0;
 	}
-
-#ifdef NATURAL_POLYNOM
-	polB = zeros( 3, M, N, N );
-	aceB = zeros( 3, M, N, N );
-#endif
 
 	//	DB=zeros(N,N,2);    //% degrees,3D
 	DB = zeros( 3, 2, N, N );
@@ -117,22 +151,6 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 	BS = zeros( 3, 2, N, N );
 	//	BS(:,:,1)=AC;       //% Accumullator for ACE, 3D
 	copy_2D_to_3d_( BS, AC );
-
-#ifdef NATURAL_POLYNOM
-	{
-		int I, J;
-		int **pWB = get_addr( WB );
-		int ***pDB = get_addr( DB );
-		int ***pCB = get_addr( CB );
-		int ***pBS = get_addr( BS );
-		int ***ppol = get_addr( polB );
-		int ***pace = get_addr( aceB );
-
-
-		for( I = 0; I < N; I++ )
-			for( J = 0; J < N; J++ )
-				unpack_pol( pWB[I][J], pDB[I][J], pCB[I][J], pBS[I][J], M, ppol[I][J], pace[I][J] );
-	}
 #endif
 
 	for( d = 3; d < gmax; d += 2 )
@@ -180,18 +198,10 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 #if 1
 				// know how!!!
 				//%BS(I,I,1:wb)=BS(I,I,2:wb+1);
-				{
-					int pd[100];
-					int pc[100];
-					int ps[100];
-					int ps_org[100];
-					int w;
-
-					w = pack_pol( ppol[i][i], pace[i][i], M, pd, pc, ps_org );
-					ppol[i][i][0] = 0;
-					w =  pack_pol( ppol[i][i], pace[i][i], M, pd, pc, ps );
-					unpack_pol( w, pd, pc, ps_org, M, ppol[i][i], pace[i][i] );
-				}
+				w = pack_pol( ppol[i][i], pace[i][i], M, pd, pc, ps_org );
+				ppol[i][i][0] = 0;
+				w =  pack_pol( ppol[i][i], pace[i][i], M, pd, pc, ps );
+				unpack_pol( w, pd, pc, ps_org, M, ppol[i][i], pace[i][i] );
 #else
 				ppol[i][i][0] = 0;
 				//BS(I,I,1:wb)=BS(I,I,2:wb+1);
@@ -239,15 +249,17 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 	for( i = 3; i < gmax; i += 2 )
 		SA[i] /= 2;
 
+
 #ifdef NATURAL_POLYNOM
 	free_ARRAY( polB );
 	free_ARRAY( aceB );
-#endif
-
+	free( buffer );
+#else
 	free_ARRAY( WB );
 	free_ARRAY( BS );
 	free_ARRAY( CB );
 	free_ARRAY( DB );
+#endif
 	free_ARRAY( HP );
 	free_ARRAY( HA );
 	free_ARRAY( A );
