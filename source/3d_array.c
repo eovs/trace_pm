@@ -3,7 +3,7 @@
 #include <stdarg.h>
 
 
-#include "array.h"
+#include "3d_array.h"
 
 void put_addr( ARRAY *x, void* addr ){ x->addr    = addr; }
 void put_ncol( ARRAY *x, int n )     { x->size[0] = n;    }

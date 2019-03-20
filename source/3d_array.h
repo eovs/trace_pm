@@ -1,5 +1,5 @@
-#ifndef _ARRAY_H_
-#define _ARRAY_H_
+#ifndef _3D_ARRAY_H_
+#define _3D_ARRAY_H_
 
 typedef struct
 {
@@ -31,4 +31,4 @@ void free_ARRAY( ARRAY x );
 int save_ARRAY( char *fileName, ARRAY x );
 int find( int **B, int pos, int n, int mode, int val, int *res );
 
-#endif //_ARRAY_H_
+#endif //_3D_ARRAY_H_

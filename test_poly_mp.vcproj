@@ -175,15 +175,15 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\source\array.c"
-				>
-			</File>
-			<File
-				RelativePath=".\source\lib.c"
+				RelativePath=".\source\3d_array.c"
 				>
 			</File>
 			<File
 				RelativePath=".\source\main.c"
+				>
+			</File>
+			<File
+				RelativePath=".\source\trace_pm.c"
 				>
 			</File>
 		</Filter>

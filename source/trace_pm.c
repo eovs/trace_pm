@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <malloc.h>
+//#include <vector>
+#include "trace_pm.h"
+#include "3d_array.h"
 
-#include "lib.h"
-#include "array.h"
-
+#define MAX_CW 1000
 
 #define my_min( x, y ) ((x) < (y) ? (x) : (y))
 #define my_max( x, y ) ((x) < (y) ? (y) : (x))
@@ -209,6 +210,7 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 #endif
 			}
 #else
+			int k;
 			int ***pCB = get_addr( CB );
 			int ***pBS = get_addr( BS );
 			int ***pDB = get_addr( DB );
@@ -268,7 +270,7 @@ void trace_bound_pol_mon_pm( ARRAY HD, int M, int gmax, int *S, int *SA )
 
 TANNER_MON_RES tanner_mon( ARRAY hd )
 {
-	int cw[1000];
+	int cw[MAX_CW];
 	int i, j;
 	int num;
 	int IC;

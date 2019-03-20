@@ -1,10 +1,10 @@
-#ifndef _LIB_H_
+#ifndef _TRACE_PM_H_
 
-#define _LIB_H_
+#define _TRACE_PM_H_
 
-#include "array.h"
+#include "3d_array.h"
 
-#define NATURAL_POLYNOM
+//#define NATURAL_POLYNOM
 
 typedef struct  
 {
@@ -59,4 +59,4 @@ MUL_MAT_MAT_MON_RES mul_mat_mat_mon( ARRAY WB, ARRAY DB, ARRAY CB, ARRAY BS, ARR
 unpack_pol( int wx, int dx[], int cx[], int xs[], int M, int pol[], int ase[] );
 int pack_pol( int pol[], int ase[], int M, int dx[], int cx[], int xs[] );
 
-#endif //_LIB_H_
+#endif //_TRACE_PM_H_
