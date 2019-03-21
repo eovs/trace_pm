@@ -207,6 +207,13 @@ int main( void )
 	}
 #endif
 
+	for( i = 0; i < get_nrow( matr ); i++ )
+	{
+		for( j = 0; j < get_ncol( matr ); j++ )
+			matr.addr[i][j] %= M;
+	}
+
+
 	fp = fopen( "matr_res.txt", "wt" );
 	fprintf_s( fp, "%d %d\n", nrow, ncol );
 	for( i = 0; i < get_nrow( matr ); i++ )
